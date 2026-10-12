@@ -49,17 +49,22 @@ Sistem ini didesain khusus **100% kompatibel dengan Shared Hosting Gratis Infini
 ├── database.sql                  <- Skrip pembuatan database, relasi tabel & seed data
 ├── database_migration_pembayaran.sql <- Migrasi manual fitur pembayaran iuran (opsional)
 ├── README.md                     <- Panduan instalasi dan dokumentasi sistem
+├── docs/
+│   └── PANDUAN-SSL-HTTPS.md      <- Cara menghilangkan peringatan "Tidak aman" (SSL/HTTPS)
 ├── index.php                     <- Root router otomatis mengarah ke public_html
 └── public_html/                  <- Root web (diupload ke folder htdocs InfinityFree)
+    ├── .htaccess                 <- Paksa HTTPS (opsional), header keamanan, blokir file sensitif
     ├── index.php                 <- Pintu masuk aplikasi (router role)
     ├── login.php                 <- Halaman login modern (CSRF & Bcrypt)
     ├── logout.php                <- Handler keluar sesi aman
     ├── config/
+    │   ├── .htaccess             <- Blokir akses browser langsung ke folder config
     │   ├── database.php          <- Kredensial koneksi PDO MySQL InfinityFree
+    │   ├── site.php              <- Saklar FORCE_HTTPS & cookie sesi aman (SSL/HTTPS)
     │   ├── auth.php              <- Proteksi role, session guard & redirection
     │   ├── csrf.php              <- Proteksi Cross-Site Request Forgery (CSRF)
     │   ├── migrations.php        <- Migrasi skema otomatis (fitur pembayaran iuran)
-    │   └── helpers.php           <- Format Rupiah, tanggal ID, upload & sanitasi
+    │   └── helpers.php           <- Format Rupiah, tanggal ID, upload, sanitasi, deteksi HTTPS
     ├── admin/
     │   ├── index.php             <- Dashboard Outing Aktif & KPI Keuangan
     │   ├── history.php           <- Dashboard Arsip Outing (Selesai & Cancelled)
@@ -80,7 +85,12 @@ Sistem ini didesain khusus **100% kompatibel dengan Shared Hosting Gratis Infini
     │   ├── participants.php      <- Endpoint AJAX status peserta
     │   ├── rundown.php           <- Endpoint AJAX jadwal acara
     │   └── purchases.php         <- Endpoint AJAX data pengeluaran
+    ├── includes/
+    │   ├── .htaccess             <- Blokir akses browser langsung ke komponen internal
+    │   ├── header.php            <- Navbar & komponen kepala halaman
+    │   └── footer.php            <- Modal preview bukti bayar & komponen kaki halaman
     ├── libs/
+    │   ├── .htaccess             <- Blokir akses browser langsung ke library
     │   ├── fpdf/                 <- Engine PDF Native PHP (No Composer)
     │   │   └── fpdf.php
     │   ├── SimpleXLSX.php        <- Parser Excel XLSX Pure PHP
@@ -89,15 +99,16 @@ Sistem ini didesain khusus **100% kompatibel dengan Shared Hosting Gratis Infini
     │   ├── css/style.css         <- Styling kustom Bootstrap 5 & Timeline Mobile
     │   └── js/main.js            <- Vanilla JS kalkulasi otomatis & konfirmasi dialog
     └── uploads/
-        └── outing/               <- Folder upload dipisah per outing ID
-            └── .htaccess         <- Proteksi server (Mencegah eksekusi file script)
+        ├── outing/               <- Folder upload bukti pembelian dipisah per outing ID
+        └── payments/             <- Folder upload bukti transfer iuran (privat)
+            └── .htaccess         <- Proteksi server (Menolak akses langsung ke file bukti bayar)
 ```
 
 ---
 
-## 🛠️ TUTORIAL 8 STEP INSTALASI DARI NOL DI INFINITYFREE
+## 🛠️ TUTORIAL 9 STEP INSTALASI DARI NOL DI INFINITYFREE
 
-Ikuti panduan 8 langkah berikut untuk memasang sistem ini di hosting gratis **InfinityFree**:
+Ikuti panduan 9 langkah berikut untuk memasang sistem ini di hosting gratis **InfinityFree**:
 
 ### **Langkah 1: Buat Akun & Hosting di InfinityFree**
 1. Buka [https://www.infinityfree.com](https://www.infinityfree.com) dan daftar akun gratis jika belum memiliki akun.
@@ -151,6 +162,8 @@ Ikuti panduan 8 langkah berikut untuk memasang sistem ini di hosting gratis **In
 1. Buka browser web (Google Chrome, Mozilla Firefox, Microsoft Edge, atau Safari).
 2. Kunjungi alamat domain Anda (contoh: `http://domainanda.infinityfreeapp.com`).
 3. Sistem akan otomatis menampilkan halaman Login Outing Management System.
+   > 🔒 Bila browser menampilkan label **"Tidak aman"**, itu normal selama SSL belum dipasang.
+   > Selesaikan dulu **Langkah 9** di bawah agar website berjalan penuh di `https://`.
 
 ### **Langkah 8: Login Menggunakan Akun Bawaan & Verifikasi Sistem**
 1. Masuk menggunakan akun Administrator default:
@@ -164,6 +177,34 @@ Ikuti panduan 8 langkah berikut untuk memasang sistem ini di hosting gratis **In
    - ✅ **Export PDF:** Klik "Unduh PDF Laporan" untuk memastikan laporan ter-generate sempurna.
    - ✅ **Import Excel:** Buka menu "Import Excel", unduh template `.xlsx`, lalu coba upload data.
    - ✅ **Login Member:** Logout, lalu login sebagai member (`user01` / `user123`) untuk memverifikasi tampilan *View-Only* dan timeline mobile.
+
+### **Langkah 9: Pasang SSL (HTTPS) agar tidak muncul peringatan "Tidak aman"**
+Browser (Chrome/Edge/Firefox) menampilkan label **"Tidak aman" / "Not secure"** bila website dibuka
+lewat `http://` tanpa enkripsi SSL. Ikuti ringkasan berikut — panduan detail + troubleshooting ada di
+**[`docs/PANDUAN-SSL-HTTPS.md`](docs/PANDUAN-SSL-HTTPS.md)**.
+
+1. **Minta sertifikat SSL gratis:** Login ke Client Area [https://dash.infinityfree.com](https://dash.infinityfree.com)
+   → menu **"SSL Certificates"** → **"New SSL Certificate"** → masukkan domain Anda **tanpa** `http://`
+   dan **tanpa** `www` → **"Create Order"**.
+2. **Verifikasi domain:** pasang CNAME yang diminta (klik **"Setup CNAME Records Automatically"** bila
+   nameserver memakai InfinityFree) → tunggu status **Ready** → klik **"Verify Domain"**.
+3. **Install sertifikat:** klik **"Install Certificate"** (otomatis), atau manual lewat Control Panel
+   hosting → **"SSL/TLS"** → **Configure** → tempel *Private Key* (RSA 2048 bit) lalu *Certificate*.
+4. **Uji:** buka `https://domain-anda.com` — gembok 🔒 harus muncul tanpa error sertifikat.
+5. **Paksa HTTPS di aplikasi ini:** edit `public_html/config/site.php` lalu ubah
+   ```php
+   define('FORCE_HTTPS', true);   // sebelumnya false
+   ```
+   Upload ulang file itu ke `htdocs/config/site.php`. Mulai sekarang setiap akses `http://`
+   otomatis dialihkan (301) ke `https://`, dan cookie sesi dikirim dengan flag `Secure`.
+   > Alternatif lebih cepat: hapus tanda `#` pada blok *RewriteEngine* di `public_html/.htaccess`.
+   >
+   > ⚠️ **Jangan** mengaktifkan `FORCE_HTTPS` sebelum SSL benar-benar terpasang — website justru
+   > tidak bisa dibuka (`ERR_SSL_PROTOCOL_ERROR`).
+6. **Perhatikan masa berlaku:** SSL gratis InfinityFree berlaku **±90 hari**; perbarui (Renew) sebelum
+   kedaluwarsa agar peringatan `NET::ERR_CERT_DATE_INVALID` tidak muncul lagi.
+7. **Masih "Tidak aman" walau sudah HTTPS?** Itu *mixed content* — buka DevTools (F12) → **Console** →
+   cari pesan `Mixed Content`, lalu ubah URL aset tersebut menjadi `https://`.
 
 ---
 
@@ -186,3 +227,7 @@ Ikuti panduan 8 langkah berikut untuk memasang sistem ini di hosting gratis **In
 - **CSRF Protection:** Setiap form interaktif diproteksi token CSRF unik per sesi.
 - **Upload Validation:** Memvalidasi MIME type asli serta ekstensi file, membatasi ukuran maksimal 5 MB, mengganti nama file secara acak, dan memproteksi folder upload menggunakan `.htaccess` untuk mencegah pengeksekusian file skrip berbahaya.
 - **Role Verification Guard:** Hak akses diverifikasi di level backend pada setiap pemanggilan halaman (bukan hanya menyembunyikan tombol di UI).
+- **HTTPS / SSL Enforcement:** Dukungan paksa HTTPS melalui `config/site.php` (`FORCE_HTTPS`) maupun `.htaccess`, lengkap dengan deteksi reverse proxy InfinityFree/Cloudflare (`X-Forwarded-Proto`, `CF-Visitor`) agar tidak terjadi redirect loop. Panduan pemasangan SSL: [`docs/PANDUAN-SSL-HTTPS.md`](docs/PANDUAN-SSL-HTTPS.md).
+- **Secure Session Cookie:** Cookie sesi diset `HttpOnly`, `SameSite=Lax`, dan `Secure` saat koneksi HTTPS sehingga tidak dapat dibaca JavaScript maupun bocor lewat HTTP.
+- **Security Headers & Hardening:** `.htaccess` mengirim `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, dan `HSTS` (khusus HTTPS), mematikan *directory listing*, serta memblokir akses langsung ke file `.sql/.md/.log` dan folder `config/`, `includes/`, `libs/`.
+- **Kredensial Database:** Jangan commit `config/database.php` berisi kredensial asli ke repositori publik — simpan hanya di server (atau tambahkan ke `.gitignore`) dan segera ganti password hosting bila pernah terlanjur dipublikasikan.

@@ -1,0 +1,67 @@
+# =====================================================================
+#  OUTING MANAGEMENT SYSTEM - Konfigurasi Apache
+#  Letakkan file ini di ROOT website (folder htdocs di InfinityFree)
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# 1) PAKSA SEMUA TRAFIK KE HTTPS  (menghilangkan label "Tidak aman")
+#
+#    ⚠️  JANGAN diaktifkan sebelum sertifikat SSL benar-benar terpasang,
+#        karena website justru tidak bisa dibuka (ERR_SSL_PROTOCOL_ERROR).
+#
+#    Cara paling aman di proyek ini: aktifkan lewat PHP, yaitu ubah
+#    FORCE_HTTPS menjadi true pada file  config/site.php
+#
+#    Jika ingin redirect di level Apache (lebih cepat & hemat resource),
+#    hapus tanda "#" pada 6 baris di bawah ini:
+# ---------------------------------------------------------------------
+<IfModule mod_rewrite.c>
+    #RewriteEngine On
+    #RewriteCond %{HTTP:X-Forwarded-Proto} !https
+    #RewriteCond %{HTTPS} off
+    #RewriteCond %{HTTP:CF-Visitor} !{"scheme":"https"}
+    #RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+</IfModule>
+
+# ---------------------------------------------------------------------
+# 2) Halaman default & matikan daftar isi folder
+# ---------------------------------------------------------------------
+DirectoryIndex index.php index.html
+Options -Indexes
+
+# ---------------------------------------------------------------------
+# 3) Header keamanan (mencegah clickjacking, MIME sniffing, dsb.)
+#    HSTS hanya dikirim ketika koneksi sudah HTTPS (env=HTTPS),
+#    jadi tidak mengunci browser saat SSL belum siap.
+# ---------------------------------------------------------------------
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    Header always set Permissions-Policy "geolocation=(), microphone=(), camera=()"
+    Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains" env=HTTPS
+</IfModule>
+
+# ---------------------------------------------------------------------
+# 4) Blokir akses langsung ke file sensitif (SQL, dokumentasi, log, dsb.)
+# ---------------------------------------------------------------------
+<IfModule mod_authz_core.c>
+    <FilesMatch "^\.|\.(sql|md|log|ini|env|lock|bak|old|dist)$">
+        Require all denied
+    </FilesMatch>
+</IfModule>
+<IfModule !mod_authz_core.c>
+    <FilesMatch "^\.|\.(sql|md|log|ini|env|lock|bak|old|dist)$">
+        Order allow,deny
+        Deny from all
+    </FilesMatch>
+</IfModule>
+
+# ---------------------------------------------------------------------
+# 5) Blokir akses web langsung ke folder internal aplikasi
+#    (config/, includes/, libs/ hanya dipakai lewat require PHP)
+# ---------------------------------------------------------------------
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^(config|includes|libs)(/|$) - [F,L]
+</IfModule>

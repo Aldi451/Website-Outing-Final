@@ -2,11 +2,11 @@
 /**
  * Header & Navbar Component
  */
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
 require_once __DIR__ . '/../config/helpers.php';
 require_once __DIR__ . '/../config/auth.php';
+
+// Pastikan sesi berjalan dengan cookie yang aman (HttpOnly / SameSite / Secure)
+start_secure_session();
 
 $pageTitle = $pageTitle ?? 'Outing Management System';
 $currentUser = current_user();

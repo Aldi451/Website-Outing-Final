@@ -3,9 +3,10 @@
  * CSRF Protection Helper
  */
 
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
+require_once __DIR__ . '/helpers.php';
+
+// Pastikan sesi berjalan dengan cookie yang aman (HttpOnly / SameSite / Secure)
+start_secure_session();
 
 /**
  * Menghasilkan CSRF token unik dan menyimpannya di session

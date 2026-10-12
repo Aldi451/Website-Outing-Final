@@ -3,8 +3,147 @@
  * Global Helper Functions
  */
 
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
+// Konfigurasi situs (FORCE_HTTPS, dsb.) - selalu tersedia sebelum dipakai
+require_once __DIR__ . '/site.php';
+
+/**
+ * Deteksi apakah request saat ini berjalan di atas HTTPS.
+ * Shared hosting (InfinityFree, Cloudflare, dsb.) biasanya memakai reverse proxy,
+ * sehingga $_SERVER['HTTPS'] sering bernilai 'off' walau browser sudah HTTPS.
+ * Karena itu header X-Forwarded-Proto / CF-Visitor ikut diperiksa.
+ *
+ * @return bool
+ */
+function is_https() {
+    if (!empty($_SERVER['HTTPS']) && strtolower((string)$_SERVER['HTTPS']) !== 'off') {
+        return true;
+    }
+    if (isset($_SERVER['SERVER_PORT']) && (int)$_SERVER['SERVER_PORT'] === 443) {
+        return true;
+    }
+    if (!empty($_SERVER['HTTP_X_FORWARDED_PROTO'])) {
+        // Bisa berupa daftar bertingkat, contoh: "https, http"
+        $proto = strtolower(trim(explode(',', $_SERVER['HTTP_X_FORWARDED_PROTO'])[0]));
+        if ($proto === 'https') {
+            return true;
+        }
+        if ($proto === 'http') {
+            return false;
+        }
+    }
+    if (!empty($_SERVER['HTTP_X_FORWARDED_SSL']) && strtolower((string)$_SERVER['HTTP_X_FORWARDED_SSL']) !== 'off') {
+        return true;
+    }
+    if (!empty($_SERVER['HTTP_CF_VISITOR']) && strpos($_SERVER['HTTP_CF_VISITOR'], '"https"') !== false) {
+        return true;
+    }
+    return false;
+}
+
+/**
+ * Ambil nama host request saat ini (tanpa nomor port).
+ * @return string
+ */
+function current_host() {
+    $host = strtolower(trim((string)($_SERVER['HTTP_HOST'] ?? 'localhost')));
+    $host = preg_replace('/:\d+$/', '', $host); // buang nomor port (contoh: localhost:8080)
+    return trim((string)$host, '[]');            // buang kurung alamat IPv6 (contoh: [::1])
+}
+
+/**
+ * Cek apakah host termasuk yang dikecualikan dari paksaan HTTPS
+ * (mis. localhost saat pengembangan lokal).
+ *
+ * @param string $host
+ * @return bool
+ */
+function host_excluded_from_https($host) {
+    $host = strtolower(trim((string)$host));
+    if ($host === '') {
+        return true;
+    }
+    $list = array_filter(array_map('trim', explode(',', FORCE_HTTPS_EXCLUDE_HOSTS)), 'strlen');
+    foreach ($list as $pattern) {
+        $pattern = strtolower($pattern);
+        if ($pattern === $host) {
+            return true;
+        }
+        if (strpos($pattern, '*') !== false) {
+            if (function_exists('fnmatch')) {
+                if (fnmatch($pattern, $host, FNM_NOESCAPE)) {
+                    return true;
+                }
+            } else {
+                // Fallback wildcard sederhana bila fnmatch tidak tersedia
+                $regex = '/^' . str_replace('\*', '.*', preg_quote($pattern, '/')) . '$/';
+                if (preg_match($regex, $host)) {
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
+}
+
+/**
+ * Alihkan pengunjung ke HTTPS (301) bila FORCE_HTTPS aktif dan SSL belum dipakai.
+ * Aman dipanggil berkali-kali: tidak melakukan apa pun jika sudah HTTPS,
+ * sedang di CLI/cron, header sudah terkirim, atau host dikecualikan.
+ *
+ * @return void
+ */
+function enforce_https() {
+    if (!FORCE_HTTPS || PHP_SAPI === 'cli' || is_https() || headers_sent()) {
+        return;
+    }
+    $host = current_host();
+    if (host_excluded_from_https($host)) {
+        return;
+    }
+    $uri = $_SERVER['REQUEST_URI'] ?? '/';
+    header('Location: https://' . $host . $uri, true, 301);
+    exit;
+}
+
+/**
+ * Mulai sesi dengan cookie yang aman (HttpOnly, SameSite, dan Secure saat HTTPS).
+ * Idempoten: aman dipanggil dari beberapa file sekaligus.
+ *
+ * @return void
+ */
+function start_secure_session() {
+    if (session_status() === PHP_SESSION_ACTIVE) {
+        return;
+    }
+    if (headers_sent()) {
+        @session_start();
+        return;
+    }
+
+    $secure = SECURE_SESSION_COOKIE && is_https();
+    $lifetime = 0;   // cookie sesi berakhir saat browser ditutup
+    $path     = '/';
+    $domain   = '';
+    $httponly = true;
+    $samesite = 'Lax';
+
+    if (PHP_VERSION_ID >= 70300) {
+        session_set_cookie_params([
+            'lifetime' => $lifetime,
+            'path'     => $path,
+            'domain'   => $domain,
+            'secure'   => $secure,
+            'httponly' => $httponly,
+            'samesite' => $samesite,
+        ]);
+    } else {
+        // PHP < 7.3 tidak mengenal opsi samesite pada session_set_cookie_params()
+        ini_set('session.cookie_httponly', '1');
+        ini_set('session.cookie_secure', $secure ? '1' : '0');
+        session_set_cookie_params($lifetime, $path, $domain, $secure, $httponly);
+    }
+
+    @session_start();
 }
 
 /**
@@ -13,7 +152,7 @@ if (session_status() === PHP_SESSION_NONE) {
  * @return string
  */
 function base_url($path = '') {
-    $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
+    $protocol = is_https() ? "https://" : "http://";
     $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
     
     // Tentukan root path aplikasi dari posisi folder public_html
@@ -689,3 +828,12 @@ function load_payment_summaries(PDO $pdo, array $outings) {
     }
     return $result;
 }
+
+/* =====================================================================
+ * BOOTSTRAP OTOMATIS
+ * helpers.php selalu di-require di bagian atas setiap halaman, jadi di
+ * sinilah tempat terpusat untuk: (1) memaksa HTTPS bila dikonfigurasi,
+ * dan (2) memulai sesi dengan cookie yang aman.
+ * ===================================================================== */
+enforce_https();
+start_secure_session();
