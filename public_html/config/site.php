@@ -17,10 +17,18 @@
 
 /**
  * Paksa semua pengunjung memakai HTTPS (redirect 301 otomatis).
- * Nilai: true = paksa HTTPS | false = biarkan apa adanya (default, aman untuk lokal)
+ * Nilai: true = paksa HTTPS | false = biarkan apa adanya (aman untuk lokal)
+ *
+ * Status: AKTIF (true) karena website sudah berada di belakang Cloudflare.
+ * Deteksi HTTPS di helpers.php membaca header Cloudflare (CF-Visitor &
+ * X-Forwarded-Proto), sehingga tidak terjadi redirect loop pada mode
+ * Flexible maupun Full.
+ *
+ * Kembalikan ke false bila: (a) SSL/Cloudflare sedang bermasalah, atau
+ * (b) Anda menguji website langsung ke IP origin tanpa HTTPS.
  */
 if (!defined('FORCE_HTTPS')) {
-    define('FORCE_HTTPS', false);
+    define('FORCE_HTTPS', true);
 }
 
 /**

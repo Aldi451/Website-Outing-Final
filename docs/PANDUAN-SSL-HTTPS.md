@@ -63,6 +63,29 @@ Jika ingin cepat, arahkan nameserver domain ke **Cloudflare** (paket gratis):
 - Proyek ini sudah mengenali header Cloudflare (`CF-Visitor`, `X-Forwarded-Proto`),
   jadi tidak akan terjadi redirect loop.
 
+### ✅ Checklist khusus pengguna Cloudflare (kondisi proyek ini saat ini)
+
+Buka dashboard Cloudflare → pilih domain Anda:
+
+| Menu | Setting | Keterangan |
+| :--- | :--- | :--- |
+| **SSL/TLS → Overview** | **Full** (disarankan) | Butuh sertifikat SSL terpasang di origin/InfinityFree (**Bagian 2**). *Flexible* = browser→Cloudflare aman, tapi Cloudflare→hosting masih HTTP (data bukti bayar tidak terenkripsi di jalur ini). *Full (strict)* butuh sertifikat valid yang belum kedaluwarsa. |
+| **SSL/TLS → Edge Certificates** | **Always Use HTTPS** = ON | Redirect `http://` → `https://` dilakukan di edge Cloudflare (paling cepat). |
+| **SSL/TLS → Edge Certificates** | **Automatic HTTPS Rewrites** = ON | Otomatis memperbaiki *mixed content* (aset `http://` di halaman HTTPS). |
+| **SSL/TLS → Edge Certificates** | **Minimum TLS Version** = 1.2 | Menolak protokol TLS lama yang tidak aman. |
+| **SSL/TLS → Edge Certificates** | **HTTP Strict Transport Security (HSTS)** = ON (opsional) | Alternatif dari header HSTS yang sudah dikirim `.htaccess`. Jangan diaktifkan kalau sertifikat masih sering bermasalah. |
+| **Speed / Caching** | Purge cache setelah upload file baru | Hindari CSS/JS lama tertahan di cache Cloudflare. |
+
+**Jika muncul error Cloudflare:**
+- **Error 525 / 526 (SSL handshake failed / invalid certificate)** → mode SSL **Full/Full (strict)** tapi
+  sertifikat belum terpasang di InfinityFree. Pasang dulu (**Bagian 2**) atau sementara turunkan ke *Flexible*.
+- **Error 521 (Web server is down)** → hosting InfinityFree sedang tidur/limit; bukan masalah SSL.
+- **Redirect loop** → pastikan memakai blok `.htaccess`/logika PHP bawaan proyek ini (sudah mengecek
+  `CF-Visitor` & `X-Forwarded-Proto`), dan jangan menambah plugin/aturan redirect lain yang hanya mengecek `%{HTTPS}`.
+
+> ℹ️ Pada proyek ini `FORCE_HTTPS` di `config/site.php` sudah diset **`true`**, jadi walau
+> "Always Use HTTPS" di Cloudflare dimatikan, aplikasi tetap mengalihkan pengunjung ke `https://`.
+
 ---
 
 ## 3️⃣ Paksa semua pengunjung memakai HTTPS (bagian proyek ini)

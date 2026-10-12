@@ -191,19 +191,23 @@ lewat `http://` tanpa enkripsi SSL. Ikuti ringkasan berikut — panduan detail +
 3. **Install sertifikat:** klik **"Install Certificate"** (otomatis), atau manual lewat Control Panel
    hosting → **"SSL/TLS"** → **Configure** → tempel *Private Key* (RSA 2048 bit) lalu *Certificate*.
 4. **Uji:** buka `https://domain-anda.com` — gembok 🔒 harus muncul tanpa error sertifikat.
-5. **Paksa HTTPS di aplikasi ini:** edit `public_html/config/site.php` lalu ubah
+5. **Paksa HTTPS di aplikasi ini:** pada `public_html/config/site.php` nilai `FORCE_HTTPS`
+   **sudah diset `true`**, sehingga setiap akses `http://` otomatis dialihkan (301) ke `https://`
+   dan cookie sesi dikirim dengan flag `Secure`. Cukup upload ulang file itu ke `htdocs/config/site.php`.
    ```php
-   define('FORCE_HTTPS', true);   // sebelumnya false
+   define('FORCE_HTTPS', true);   // aktif; kembalikan ke false bila SSL sedang bermasalah
    ```
-   Upload ulang file itu ke `htdocs/config/site.php`. Mulai sekarang setiap akses `http://`
-   otomatis dialihkan (301) ke `https://`, dan cookie sesi dikirim dengan flag `Secure`.
    > Alternatif lebih cepat: hapus tanda `#` pada blok *RewriteEngine* di `public_html/.htaccess`.
    >
    > ⚠️ **Jangan** mengaktifkan `FORCE_HTTPS` sebelum SSL benar-benar terpasang — website justru
-   > tidak bisa dibuka (`ERR_SSL_PROTOCOL_ERROR`).
-6. **Perhatikan masa berlaku:** SSL gratis InfinityFree berlaku **±90 hari**; perbarui (Renew) sebelum
+   > tidak bisa dibuka (`ERR_SSL_PROTOCOL_ERROR`). Deteksi HTTPS proyek ini sudah membaca header
+   > proxy (`X-Forwarded-Proto`) dan Cloudflare (`CF-Visitor`), jadi aman dari *redirect loop*.
+6. **Pengguna Cloudflare:** set **SSL/TLS → Overview** ke mode **Full**, aktifkan **Always Use HTTPS**
+   dan **Automatic HTTPS Rewrites** (memperbaiki *mixed content* otomatis). Checklist lengkap & arti
+   error 521/525/526 ada di [`docs/PANDUAN-SSL-HTTPS.md`](docs/PANDUAN-SSL-HTTPS.md).
+7. **Perhatikan masa berlaku:** SSL gratis InfinityFree berlaku **±90 hari**; perbarui (Renew) sebelum
    kedaluwarsa agar peringatan `NET::ERR_CERT_DATE_INVALID` tidak muncul lagi.
-7. **Masih "Tidak aman" walau sudah HTTPS?** Itu *mixed content* — buka DevTools (F12) → **Console** →
+8. **Masih "Tidak aman" walau sudah HTTPS?** Itu *mixed content* — buka DevTools (F12) → **Console** →
    cari pesan `Mixed Content`, lalu ubah URL aset tersebut menjadi `https://`.
 
 ---
