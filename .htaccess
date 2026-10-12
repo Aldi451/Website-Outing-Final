@@ -1,4 +1,0 @@
-# Protect private database credentials if config.php is placed in the web root.
-<Files "config.php">
-    Require all denied
-</Files>
