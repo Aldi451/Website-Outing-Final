@@ -11,6 +11,8 @@ define('DB_USER', 'if0_42971783');            // Ganti dengan MySQL Username Inf
 define('DB_PASS', 'F1020jong');     // Ganti dengan Password Akun Hosting/vPanel Anda
 define('DB_CHARSET', 'utf8mb4');
 
+require_once __DIR__ . '/migrations.php';
+
 /**
  * Mendapatkan koneksi PDO ke database
  * @return PDO
@@ -41,6 +43,9 @@ function getDB() {
                 <p><small>Tips InfinityFree: Buka Control Panel -> MySQL Databases untuk melihat detail Host & User MySQL Anda.</small></p>
             </div>');
         }
+
+        // Pastikan skema terbaru (kolom pembayaran & tabel bukti bayar) sudah tersedia
+        run_schema_migrations($pdo);
     }
     return $pdo;
 }

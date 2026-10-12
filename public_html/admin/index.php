@@ -23,6 +23,9 @@ $stmt = $pdo->query("
 ");
 $activeOutings = $stmt->fetchAll();
 
+// 1b. Ringkasan iuran per outing (estimasi per member, terkumpul, kekurangan)
+$paySummaries = load_payment_summaries($pdo, $activeOutings);
+
 // 2. Ringkasan Global Outing Aktif
 $totalBudget = 0;
 $totalSpent = 0;
@@ -183,6 +186,31 @@ require_once __DIR__ . '/../includes/header.php';
                                         <div class="col-6 col-md-3">
                                             <span class="text-muted d-block">Peserta Ikut:</span>
                                             <strong><i class="bi bi-people-fill text-secondary me-1"></i><?= $item['total_peserta_ikut']; ?> / <?= $item['total_peserta']; ?> org</strong>
+                                        </div>
+                                    </div>
+
+                                    <!-- Estimasi Iuran per Member -->
+                                    <?php $ps = $paySummaries[$item['id']]; ?>
+                                    <div class="row g-2 mt-1 pt-2 border-top small bg-light rounded mx-0 pb-2">
+                                        <div class="col-6 col-md-3">
+                                            <span class="text-muted d-block">Estimasi / Member:</span>
+                                            <strong class="text-primary"><?= format_rupiah($ps['estimate']); ?></strong>
+                                            <span class="text-muted" style="font-size:.7rem;"><?= $ps['is_manual'] ? '(manual)' : '(otomatis)'; ?></span>
+                                        </div>
+                                        <div class="col-6 col-md-3">
+                                            <span class="text-muted d-block">Iuran Terkumpul:</span>
+                                            <strong class="text-success"><?= format_rupiah($ps['collected']); ?></strong>
+                                        </div>
+                                        <div class="col-6 col-md-3">
+                                            <span class="text-muted d-block">Kekurangan Iuran:</span>
+                                            <strong class="<?= $ps['outstanding'] > 0 ? 'text-danger' : 'text-success'; ?>"><?= format_rupiah($ps['outstanding']); ?></strong>
+                                        </div>
+                                        <div class="col-6 col-md-3">
+                                            <span class="text-muted d-block">Lunas / Partial / Belum:</span>
+                                            <strong><?= $ps['count_sudah']; ?> / <span class="text-partial"><?= $ps['count_partial']; ?></span> / <?= $ps['count_belum']; ?></strong>
+                                            <?php if ($ps['pending_proofs'] > 0): ?>
+                                                <a href="<?= base_url('admin/outing_detail.php?id=' . $item['id'] . '#participants'); ?>" class="badge bg-danger text-decoration-none ms-1"><?= $ps['pending_proofs']; ?> bukti baru</a>
+                                            <?php endif; ?>
                                         </div>
                                     </div>
 

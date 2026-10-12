@@ -17,6 +17,7 @@ $stmt = $pdo->prepare('
     SELECT o.*, 
            p.attendance_status, 
            p.payment_status, 
+           p.amount_paid,
            p.notes as participant_notes,
            (SELECT COUNT(*) FROM outing_participants op WHERE op.outing_id = o.id AND op.attendance_status = "ikut") as total_peserta_ikut,
            (SELECT COUNT(*) FROM rundown r WHERE r.outing_id = o.id) as total_agenda
@@ -38,7 +39,7 @@ require_once __DIR__ . '/../includes/header.php';
             <div class="card-body p-4 p-md-5">
                 <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
                     <div>
-                        <span class="badge bg-white text-primary mb-2">Member Portal &bull; View Only</span>
+                        <span class="badge bg-white text-primary mb-2">Member Portal</span>
                         <h2 class="fw-bold mb-1">Halo, <?= htmlspecialchars($currentUser['nama']); ?>! 👋</h2>
                         <p class="mb-0 text-white-50">Berikut adalah agenda outing perusahaan yang Anda ikuti.</p>
                     </div>
@@ -92,6 +93,17 @@ require_once __DIR__ . '/../includes/header.php';
                                 <span class="small text-muted">Status Iuran/Bayar:</span>
                                 <div><?= payment_badge($o['payment_status']); ?></div>
                             </div>
+                            <?php
+                                $est = outing_estimate_per_person($o, $o['total_peserta_ikut']);
+                                $kurang = participant_outstanding($o, $est);
+                            ?>
+                            <div class="mt-2 pt-2 border-top small">
+                                <div class="d-flex justify-content-between"><span class="text-muted">Estimasi / Member:</span><strong><?= format_rupiah($est); ?></strong></div>
+                                <div class="d-flex justify-content-between"><span class="text-muted">Sudah Dibayar:</span><strong class="text-success"><?= format_rupiah($o['amount_paid']); ?></strong></div>
+                                <?php if ($kurang > 0): ?>
+                                    <div class="d-flex justify-content-between"><span class="text-muted">Sisa Tagihan:</span><strong class="text-danger"><?= format_rupiah($kurang); ?></strong></div>
+                                <?php endif; ?>
+                            </div>
                             <?php if (!empty($o['participant_notes'])): ?>
                                 <div class="mt-2 pt-2 border-top small text-secondary">
                                     <i class="bi bi-info-circle me-1"></i>Catatan: <?= htmlspecialchars($o['participant_notes']); ?>
@@ -102,6 +114,11 @@ require_once __DIR__ . '/../includes/header.php';
                         <a href="<?= base_url('member/outing_detail.php?id=' . $o['id']); ?>" class="btn btn-outline-primary btn-sm w-100 mt-2">
                             <i class="bi bi-card-checklist me-1"></i> Lihat Rundown & Info Lengkap
                         </a>
+                        <?php if ($o['status'] !== 'cancelled'): ?>
+                            <a href="<?= base_url('member/outing_detail.php?id=' . $o['id']); ?>#m-payment" class="btn btn-<?= $kurang > 0 ? 'success' : 'outline-success'; ?> btn-sm w-100 mt-2">
+                                <i class="bi bi-cloud-arrow-up me-1"></i> Pembayaran & Upload Bukti
+                            </a>
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>

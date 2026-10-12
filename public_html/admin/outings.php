@@ -20,6 +20,7 @@ $outing = [
     'start_date' => date('Y-m-d'),
     'end_date' => date('Y-m-d', strtotime('+1 day')),
     'budget' => 0,
+    'budget_per_person' => 0,
     'status' => 'planning',
     'description' => ''
 ];
@@ -57,6 +58,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 foreach ($files as $f) {
                     delete_receipt($f);
                 }
+                // Hapus bukti pembayaran iuran member (file privat + data)
+                delete_payment_proofs($pdo, 'outing_id', $deleteId);
 
                 // Hapus data outing (CASCADE menghapus participants, rundown, purchases)
                 $delStmt = $pdo->prepare('DELETE FROM outings WHERE id = :id');
@@ -72,6 +75,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $start_date = trim($_POST['start_date'] ?? '');
             $end_date = trim($_POST['end_date'] ?? '');
             $budget = (float)str_replace(['.', ','], ['', '.'], $_POST['budget'] ?? '0');
+            $budgetPerPerson = max(0, parse_money($_POST['budget_per_person'] ?? '0'));
             $status = trim($_POST['status'] ?? 'planning');
             $description = trim($_POST['description'] ?? '');
 
@@ -85,7 +89,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $upStmt = $pdo->prepare('
                         UPDATE outings 
                         SET outing_name = :name, destination = :dest, start_date = :s_date, end_date = :e_date, 
-                            budget = :budget, status = :status, description = :desc
+                            budget = :budget, budget_per_person = :bpp, status = :status, description = :desc
                         WHERE id = :id
                     ');
                     $upStmt->execute([
@@ -94,6 +98,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         ':s_date'  => $start_date,
                         ':e_date'  => $end_date,
                         ':budget'  => $budget,
+                        ':bpp'     => $budgetPerPerson,
                         ':status'  => $status,
                         ':desc'    => $description,
                         ':id'      => $id
@@ -105,8 +110,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 } else {
                     // Insert Outing Baru (Tidak menimpa/menghapus data lama)
                     $insStmt = $pdo->prepare('
-                        INSERT INTO outings (outing_name, destination, start_date, end_date, budget, status, description)
-                        VALUES (:name, :dest, :s_date, :e_date, :budget, :status, :desc)
+                        INSERT INTO outings (outing_name, destination, start_date, end_date, budget, budget_per_person, status, description)
+                        VALUES (:name, :dest, :s_date, :e_date, :budget, :bpp, :status, :desc)
                     ');
                     $insStmt->execute([
                         ':name'    => $name,
@@ -114,6 +119,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         ':s_date'  => $start_date,
                         ':e_date'  => $end_date,
                         ':budget'  => $budget,
+                        ':bpp'     => $budgetPerPerson,
                         ':status'  => $status,
                         ':desc'    => $description
                     ]);
@@ -200,9 +206,18 @@ require_once __DIR__ . '/../includes/header.php';
                         </div>
                     </div>
 
+                    <div class="mb-3">
+                        <label for="budget_per_person" class="form-label fw-semibold">Estimasi Iuran per Member (Rp) <span class="text-muted fw-normal small">(opsional)</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text">Rp</span>
+                            <input type="number" class="form-control" id="budget_per_person" name="budget_per_person" min="0" step="1000" placeholder="0 = otomatis" value="<?= htmlspecialchars($_POST['budget_per_person'] ?? (int)($outing['budget_per_person'] ?? 0)); ?>">
+                        </div>
+                        <div class="form-text">Kosongkan / isi 0 agar dihitung otomatis: <strong>Total Budget ÷ jumlah peserta berstatus Ikut</strong> (dibulatkan ke atas per Rp 1.000). Nilai ini menjadi acuan status <em>Partial</em> / <em>Sudah Bayar</em>.</div>
+                    </div>
+
                     <div class="mb-4">
                         <label for="description" class="form-label fw-semibold">Keterangan / Deskripsi Kegiatan</label>
-                        <textarea class="form-control" id="description" name="description" rows="3" placeholder="Tuliskan catatan tema acara, dress code, atau informasi umum lainnya..."><?= htmlspecialchars($_POST['description'] ?? $outing['description']); ?></textarea>
+                        <textarea class="form-control" id="description" name="description" rows="3" placeholder="Tuliskan catatan tema acara, dress code, atau informasi umum lainnya..."><?= htmlspecialchars($_POST['description'] ?? $outing['description'] ?? ''); ?></textarea>
                     </div>
 
                     <div class="d-flex justify-content-between align-items-center pt-3 border-top">

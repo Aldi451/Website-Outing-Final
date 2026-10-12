@@ -53,6 +53,9 @@ $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $historyOutings = $stmt->fetchAll();
 
+// Ringkasan iuran per outing (estimasi per member, terkumpul, kekurangan)
+$paySummaries = load_payment_summaries($pdo, $historyOutings);
+
 $pageTitle = 'History Outing (Arsip)';
 require_once __DIR__ . '/../includes/header.php';
 ?>
@@ -131,6 +134,7 @@ require_once __DIR__ . '/../includes/header.php';
                             <th>Tanggal Pelaksanaan</th>
                             <th>Status</th>
                             <th>Anggaran vs Realisasi</th>
+                            <th>Estimasi / Member & Iuran</th>
                             <th>Peserta Hadir</th>
                             <th class="text-center" style="width: 220px;">Aksi</th>
                         </tr>
@@ -157,6 +161,15 @@ require_once __DIR__ . '/../includes/header.php';
                                     <div class="small <?= $sisa < 0 ? 'text-danger' : 'text-success'; ?>">
                                         Sisa: <?= format_rupiah($sisa); ?>
                                     </div>
+                                </td>
+                                <td>
+                                    <?php $ps = $paySummaries[$row['id']]; ?>
+                                    <div class="small">Estimasi: <strong class="text-primary"><?= format_rupiah($ps['estimate']); ?></strong><span class="text-muted">/org</span></div>
+                                    <div class="small text-muted">Terkumpul: <strong class="text-success"><?= format_rupiah($ps['collected']); ?></strong></div>
+                                    <?php if ($ps['outstanding'] > 0): ?>
+                                        <div class="small text-danger">Kurang: <?= format_rupiah($ps['outstanding']); ?></div>
+                                    <?php endif; ?>
+                                    <div class="small text-muted"><?= $ps['count_sudah']; ?> lunas &bull; <span class="text-partial"><?= $ps['count_partial']; ?> partial</span> &bull; <?= $ps['count_belum']; ?> belum</div>
                                 </td>
                                 <td>
                                     <span class="badge bg-light text-dark border">
