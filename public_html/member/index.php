@@ -39,7 +39,7 @@ require_once __DIR__ . '/../includes/header.php';
             <div class="card-body p-4 p-md-5">
                 <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
                     <div>
-                        <span class="badge bg-white text-primary mb-2">Member Portal</span>
+                        <span class="badge bg-white text-primary mb-2">Member Portal &bull; View Only</span>
                         <h2 class="fw-bold mb-1">Halo, <?= htmlspecialchars($currentUser['nama']); ?>! 👋</h2>
                         <p class="mb-0 text-white-50">Berikut adalah agenda outing perusahaan yang Anda ikuti.</p>
                     </div>

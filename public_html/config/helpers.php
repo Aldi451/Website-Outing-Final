@@ -213,7 +213,7 @@ function upload_receipt($file, $outing_id) {
     $allowedMimes = ['image/jpeg', 'image/pjpeg', 'image/png', 'application/pdf', 'application/x-pdf'];
     $finfo = finfo_open(FILEINFO_MIME_TYPE);
     $mimeType = finfo_file($finfo, $file['tmp_name']);
-    if (PHP_VERSION_ID < 80100) { finfo_close($finfo); }
+    finfo_close($finfo);
 
     if (!in_array($mimeType, $allowedMimes)) {
         throw new Exception('MIME Type file tidak valid (' . htmlspecialchars($mimeType) . ').');

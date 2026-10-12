@@ -217,7 +217,7 @@ require_once __DIR__ . '/../includes/header.php';
 
                     <div class="mb-4">
                         <label for="description" class="form-label fw-semibold">Keterangan / Deskripsi Kegiatan</label>
-                        <textarea class="form-control" id="description" name="description" rows="3" placeholder="Tuliskan catatan tema acara, dress code, atau informasi umum lainnya..."><?= htmlspecialchars($_POST['description'] ?? $outing['description'] ?? ''); ?></textarea>
+                        <textarea class="form-control" id="description" name="description" rows="3" placeholder="Tuliskan catatan tema acara, dress code, atau informasi umum lainnya..."><?= htmlspecialchars($_POST['description'] ?? $outing['description']); ?></textarea>
                     </div>
 
                     <div class="d-flex justify-content-between align-items-center pt-3 border-top">

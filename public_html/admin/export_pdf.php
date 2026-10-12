@@ -319,7 +319,7 @@ if (empty($participants)) {
         $pdf->Cell(8, 6, $noPart++, 1, 0, 'C');
         $pdf->Cell(22, 6, substr($pt['user_id'], 0, 14), 1, 0, 'L');
         $pdf->Cell(45, 6, substr($pt['nama'], 0, 26), 1, 0, 'L');
-        $pdf->Cell(20, 6, strtoupper(str_replace('_', ' ', $pt['attendance_status'])), 1, 0, 'C');
+        $pdf->Cell(20, 6, strtoupper($pt['attendance_status']), 1, 0, 'C');
         $pdf->Cell(20, 6, strtoupper($pt['payment_status']), 1, 0, 'C');
         $pdf->Cell(25, 6, format_rupiah($pt['amount_paid'] ?? 0), 1, 0, 'R');
         $kurangPt = participant_outstanding($pt, $estimatePerPerson);

@@ -70,7 +70,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$isReadOnly) {
         if ($action === 'add_participant') {
             $userId = (int)($_POST['user_id'] ?? 0);
             $attendance = $_POST['attendance_status'] ?? 'ikut';
-            if (!in_array($attendance, ['ikut', 'batal', 'tidak_ikut'], true)) $attendance = 'ikut';
             $payment = $_POST['payment_status'] ?? 'auto';
             $amountPaid = max(0, parse_money($_POST['amount_paid'] ?? '0'));
             $notes = trim($_POST['notes'] ?? '');
@@ -95,7 +94,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$isReadOnly) {
                         $setPaymentStatus((int)$pdo->lastInsertId(), 'auto');
                     }
                     flash_set('success', 'Peserta berhasil ditambahkan ke outing.');
-                    header('Location: ' . $redirectBase . '#participants');
+                    header('Location: ' . base_url('admin/outing_detail.php?id=' . $outingId . ($mode === 'edit_history' ? '&mode=edit_history' : '') . '#participants'));
                     exit;
                 } catch (PDOException $e) {
                     $error = 'User sudah terdaftar sebagai peserta pada outing ini.';
@@ -103,11 +102,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$isReadOnly) {
             }
         }
 
-        // --- B. UPDATE STATUS PESERTA & NOMINAL YANG SUDAH DIBAYAR ---
+        // --- B. UPDATE STATUS PESERTA ---
         elseif ($action === 'update_participant_status') {
             $partId = (int)($_POST['participant_id'] ?? 0);
             $attendance = $_POST['attendance_status'] ?? 'ikut';
-            if (!in_array($attendance, ['ikut', 'batal', 'tidak_ikut'], true)) $attendance = 'ikut';
             $payment = $_POST['payment_status'] ?? 'auto';
             $amountPaid = max(0, parse_money($_POST['amount_paid'] ?? '0'));
             $notes = trim($_POST['notes'] ?? '');
@@ -126,8 +124,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$isReadOnly) {
             ]);
             $finalStatus = $setPaymentStatus($partId, $payment);
 
-            flash_set('success', 'Data peserta diperbarui. Dibayar: ' . format_rupiah($amountPaid) . ' (status: ' . strtoupper($finalStatus) . ').');
-            header('Location: ' . $redirectBase . '#participants');
+            flash_set('success', 'Status peserta berhasil diperbarui. Dibayar: ' . format_rupiah($amountPaid) . ' (status: ' . strtoupper($finalStatus) . ').');
+            header('Location: ' . base_url('admin/outing_detail.php?id=' . $outingId . ($mode === 'edit_history' ? '&mode=edit_history' : '') . '#participants'));
             exit;
         }
 
@@ -143,7 +141,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$isReadOnly) {
             $delP->execute([':id' => $partId, ':oid' => $outingId]);
 
             flash_set('success', 'Peserta berhasil dihapus dari outing.');
-            header('Location: ' . $redirectBase . '#participants');
+            header('Location: ' . base_url('admin/outing_detail.php?id=' . $outingId . ($mode === 'edit_history' ? '&mode=edit_history' : '') . '#participants'));
             exit;
         }
 
@@ -674,7 +672,7 @@ require_once __DIR__ . '/../includes/header.php';
     </li>
     <li class="nav-item" role="presentation">
         <button class="nav-link" id="participants-tab" data-bs-toggle="tab" data-bs-target="#participants" type="button" role="tab">
-            <i class="bi bi-people me-1"></i> Peserta & Iuran (<?= count($participants); ?>)
+            <i class="bi bi-people me-1"></i> Peserta (<?= count($participants); ?>)
             <?php if ($pendingProofCount > 0): ?><span class="badge bg-danger ms-1" title="Bukti bayar menunggu verifikasi"><?= $pendingProofCount; ?></span><?php endif; ?>
         </button>
     </li>
@@ -763,7 +761,7 @@ require_once __DIR__ . '/../includes/header.php';
                             <div class="col-4">
                                 <div class="p-2 border rounded bg-light">
                                     <div class="fs-5 fw-bold text-info"><?= $countSudahBayar; ?> Org</div>
-                                    <div class="small text-muted">Sudah Bayar</div>
+                                    <div class="small text-muted">Sudah Membayar</div>
                                 </div>
                             </div>
                             <div class="col-4">
@@ -775,7 +773,7 @@ require_once __DIR__ . '/../includes/header.php';
                             <div class="col-4">
                                 <div class="p-2 border rounded bg-light">
                                     <div class="fs-5 fw-bold text-warning"><?= $countBelumBayar; ?> Org</div>
-                                    <div class="small text-muted">Belum Bayar</div>
+                                    <div class="small text-muted">Belum Membayar</div>
                                 </div>
                             </div>
                         </div>
@@ -881,7 +879,7 @@ require_once __DIR__ . '/../includes/header.php';
         <div class="card shadow-sm">
             <div class="card-header d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2">
                 <span class="fw-bold">
-                    <i class="bi bi-people-fill me-2 text-primary"></i>Daftar Peserta & Pembayaran Iuran
+                    <i class="bi bi-people-fill me-2 text-primary"></i>Daftar Peserta Terdaftar
                     <?php if ($pendingProofCount > 0): ?>
                         <span class="badge bg-danger ms-1"><?= $pendingProofCount; ?> bukti baru</span>
                     <?php endif; ?>
@@ -916,6 +914,7 @@ require_once __DIR__ . '/../includes/header.php';
                                 <tr>
                                     <th style="width: 40px;">No</th>
                                     <th>Nama Peserta</th>
+                                    <th>User ID</th>
                                     <th>Kehadiran</th>
                                     <th>Pembayaran</th>
                                     <th class="text-end">Sudah Dibayar</th>
@@ -923,7 +922,7 @@ require_once __DIR__ . '/../includes/header.php';
                                     <th class="text-center">Bukti Bayar</th>
                                     <th>Catatan</th>
                                     <?php if (!$isReadOnly): ?>
-                                        <th class="text-center" style="width: 110px;">Aksi</th>
+                                        <th class="text-center" style="width: 140px;">Aksi</th>
                                     <?php endif; ?>
                                 </tr>
                             </thead>
@@ -938,10 +937,8 @@ require_once __DIR__ . '/../includes/header.php';
                                     ?>
                                     <tr class="<?= $kurang > 0 && $pt['payment_status'] === 'partial' ? 'row-partial' : ''; ?>">
                                         <td><?= $no++; ?></td>
-                                        <td>
-                                            <div class="fw-semibold"><?= htmlspecialchars($pt['nama']); ?></div>
-                                            <code class="small"><?= htmlspecialchars($pt['user_id']); ?></code>
-                                        </td>
+                                        <td class="fw-semibold"><?= htmlspecialchars($pt['nama']); ?></td>
+                                        <td><code><?= htmlspecialchars($pt['user_id']); ?></code></td>
                                         <td><?= attendance_badge($pt['attendance_status']); ?></td>
                                         <td><?= payment_badge($pt['payment_status']); ?></td>
                                         <td class="text-end fw-semibold"><?= format_rupiah($pt['amount_paid']); ?></td>
@@ -963,8 +960,8 @@ require_once __DIR__ . '/../includes/header.php';
                                         </td>
                                         <td class="small text-muted"><?= htmlspecialchars($pt['notes'] ?? '-'); ?></td>
                                         <?php if (!$isReadOnly): ?>
-                                            <td class="text-center text-nowrap">
-                                                <button type="button" class="btn btn-outline-primary btn-sm me-1" data-bs-toggle="modal" data-bs-target="#editPartModal<?= $pt['id']; ?>" title="Edit Status & Pembayaran">
+                                            <td class="text-center">
+                                                <button type="button" class="btn btn-outline-primary btn-sm me-1" data-bs-toggle="modal" data-bs-target="#editPartModal<?= $pt['id']; ?>" title="Edit Status">
                                                     <i class="bi bi-pencil"></i>
                                                 </button>
                                                 <form method="POST" action="" class="d-inline">
@@ -982,7 +979,7 @@ require_once __DIR__ . '/../includes/header.php';
                             </tbody>
                             <tfoot class="table-light">
                                 <tr>
-                                    <th colspan="4" class="text-end">TOTAL:</th>
+                                    <th colspan="5" class="text-end">TOTAL:</th>
                                     <th class="text-end text-success"><?= format_rupiah($paySummary['collected']); ?></th>
                                     <th class="text-end text-danger"><?= format_rupiah($paySummary['outstanding']); ?></th>
                                     <th colspan="<?= $isReadOnly ? 2 : 3; ?>"></th>
