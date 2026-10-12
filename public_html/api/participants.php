@@ -47,7 +47,7 @@ if ($method === 'POST') {
         $id = (int)($_POST['participant_id'] ?? 0);
         $status = $_POST['status'] ?? 'belum';
 
-        if (!in_array($status, ['sudah', 'belum'])) {
+        if (!in_array($status, payment_statuses(), true)) {
             echo json_encode(['success' => false, 'message' => 'Status pembayaran tidak valid']);
             exit;
         }

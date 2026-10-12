@@ -76,12 +76,13 @@ $sisaBudget = $outing['budget'] - $totalSpent;
 
 $countHadir = 0;
 $countBatal = 0;
-$countSudahBayar = 0;
 foreach ($participants as $pt) {
     if ($pt['attendance_status'] === 'ikut') $countHadir++;
     if ($pt['attendance_status'] === 'batal') $countBatal++;
-    if ($pt['payment_status'] === 'sudah') $countSudahBayar++;
 }
+$paySummary = payment_summary($participants, $outing);
+$countSudahBayar = $paySummary['count_sudah'];
+$estimatePerPerson = $paySummary['estimate'];
 
 // Class Custom PDF
 class OutingReportPDF extends FPDF {
@@ -175,6 +176,22 @@ $pdf->SetFont('Helvetica', 'B', 9);
 $pdf->Cell(48, 7, format_rupiah($sisaBudget), 1, 0, 'C');
 $pdf->SetFont('Helvetica', '', 9);
 $pdf->Cell(48, 7, $countHadir . ' Hadir / ' . count($participants) . ' Terdaftar', 1, 1, 'C');
+
+// Ringkasan Iuran Peserta
+$pdf->SetFont('Helvetica', 'B', 8.5);
+$pdf->SetFillColor(226, 232, 240);
+$pdf->Cell(47, 6, 'Estimasi Iuran / Member', 1, 0, 'C', true);
+$pdf->Cell(47, 6, 'Iuran Terkumpul', 1, 0, 'C', true);
+$pdf->Cell(48, 6, 'Kekurangan Iuran', 1, 0, 'C', true);
+$pdf->Cell(48, 6, 'Lunas / Partial / Belum', 1, 1, 'C', true);
+
+$pdf->SetFont('Helvetica', '', 9);
+$pdf->Cell(47, 7, format_rupiah($estimatePerPerson), 1, 0, 'C');
+$pdf->Cell(47, 7, format_rupiah($paySummary['collected']), 1, 0, 'C');
+$pdf->SetFont('Helvetica', 'B', 9);
+$pdf->Cell(48, 7, format_rupiah($paySummary['outstanding']), 1, 0, 'C');
+$pdf->SetFont('Helvetica', '', 9);
+$pdf->Cell(48, 7, $paySummary['count_sudah'] . ' / ' . $paySummary['count_partial'] . ' / ' . $paySummary['count_belum'], 1, 1, 'C');
 
 $pdf->Ln(5);
 
@@ -284,12 +301,14 @@ $pdf->SectionTitle('5. DAFTAR PESERTA & STATUS KEHADIRAN');
 
 $pdf->SetFont('Helvetica', 'B', 8);
 $pdf->SetFillColor(241, 245, 249);
-$pdf->Cell(10, 6, 'No', 1, 0, 'C', true);
-$pdf->Cell(30, 6, 'User ID', 1, 0, 'L', true);
-$pdf->Cell(60, 6, 'Nama Lengkap', 1, 0, 'L', true);
-$pdf->Cell(30, 6, 'Kehadiran', 1, 0, 'C', true);
-$pdf->Cell(30, 6, 'Pembayaran', 1, 0, 'C', true);
-$pdf->Cell(30, 6, 'Catatan', 1, 1, 'L', true);
+$pdf->Cell(8, 6, 'No', 1, 0, 'C', true);
+$pdf->Cell(22, 6, 'User ID', 1, 0, 'L', true);
+$pdf->Cell(45, 6, 'Nama Lengkap', 1, 0, 'L', true);
+$pdf->Cell(20, 6, 'Kehadiran', 1, 0, 'C', true);
+$pdf->Cell(20, 6, 'Pembayaran', 1, 0, 'C', true);
+$pdf->Cell(25, 6, 'Dibayar', 1, 0, 'R', true);
+$pdf->Cell(25, 6, 'Kekurangan', 1, 0, 'R', true);
+$pdf->Cell(25, 6, 'Catatan', 1, 1, 'L', true);
 
 $pdf->SetFont('Helvetica', '', 8);
 $noPart = 1;
@@ -297,12 +316,15 @@ if (empty($participants)) {
     $pdf->Cell(190, 6, 'Belum ada peserta terdaftar.', 1, 1, 'C');
 } else {
     foreach ($participants as $pt) {
-        $pdf->Cell(10, 6, $noPart++, 1, 0, 'C');
-        $pdf->Cell(30, 6, $pt['user_id'], 1, 0, 'L');
-        $pdf->Cell(60, 6, substr($pt['nama'], 0, 32), 1, 0, 'L');
-        $pdf->Cell(30, 6, strtoupper($pt['attendance_status']), 1, 0, 'C');
-        $pdf->Cell(30, 6, strtoupper($pt['payment_status']), 1, 0, 'C');
-        $pdf->Cell(30, 6, substr($pt['notes'] ?? '-', 0, 18), 1, 1, 'L');
+        $pdf->Cell(8, 6, $noPart++, 1, 0, 'C');
+        $pdf->Cell(22, 6, substr($pt['user_id'], 0, 14), 1, 0, 'L');
+        $pdf->Cell(45, 6, substr($pt['nama'], 0, 26), 1, 0, 'L');
+        $pdf->Cell(20, 6, strtoupper($pt['attendance_status']), 1, 0, 'C');
+        $pdf->Cell(20, 6, strtoupper($pt['payment_status']), 1, 0, 'C');
+        $pdf->Cell(25, 6, format_rupiah($pt['amount_paid'] ?? 0), 1, 0, 'R');
+        $kurangPt = participant_outstanding($pt, $estimatePerPerson);
+        $pdf->Cell(25, 6, $kurangPt > 0 ? format_rupiah($kurangPt) : '-', 1, 0, 'R');
+        $pdf->Cell(25, 6, substr($pt['notes'] ?? '-', 0, 15), 1, 1, 'L');
     }
 }
 

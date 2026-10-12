@@ -27,7 +27,15 @@ Sistem ini didesain khusus **100% kompatibel dengan Shared Hosting Gratis Infini
    - Tampilan Rundown format **Timeline Card Responsif** yang sangat nyaman dibaca di smartphone saat kegiatan berlangsung.
    - Transparansi keuangan & tampilan popup bukti bayar.
 
-4. **Fitur Import Excel (.xlsx) & Export PDF:**
+4. **Pembayaran Iuran Peserta (Budget per Member, Partial & Bukti Bayar):**
+   - **Estimasi Iuran / Member:** Diisi manual di form outing, atau otomatis `Total Budget ÷ peserta berstatus Ikut` (dibulatkan ke atas per Rp 1.000). Tampil di Dashboard Aktif, History, Detail Outing & PDF.
+   - **Budget Sudah Dibayar:** Admin memasukkan nominal yang sudah dibayar tiap peserta pada tab *Peserta & Iuran*. Kolom *Kekurangan* & kartu **Daftar Tagihan Iuran** menunjukkan siapa saja yang harus ditagih dan berapa.
+   - **Status Pembayaran:** `Belum` / `Partial` / `Sudah`. Mode *Otomatis*: 0 = Belum, di bawah estimasi = Partial, sama dengan/melebihi estimasi = Sudah. Admin tetap bisa mengatur status manual, dan tombol *Hitung Ulang Status* menyinkronkan ulang semua peserta.
+   - **Upload Bukti Bayar oleh Member:** Member mengunggah foto/screenshot transfer di tab *Pembayaran Saya*. Gambar **dikompres otomatis** di browser dan di server (sisi pendek maks. 1440px, sisi panjang maks. 2560px, JPEG kualitas 82), jadi file kecil tapi teks struk tetap terbaca. Admin bisa *Verifikasi +Nominal* (langsung menambah *Sudah Dibayar*), *Verifikasi saja*, *Tolak*, atau *Hapus*.
+   - **Privasi:** Member lain hanya melihat **status** pembayaran (Belum/Partial/Sudah), tanpa nominal. Nominal dibayar, sisa tagihan & bukti transfer hanya bisa dilihat oleh member yang bersangkutan dan admin. File bukti disimpan di `uploads/payments/` (diblokir `.htaccess`) dan hanya bisa dibuka lewat `member/view_payment_proof.php` yang memeriksa kepemilikan. Member juga hanya bisa membuka outing yang diikutinya.
+   - **Migrasi Database Otomatis:** Kolom & tabel baru dibuat otomatis oleh `config/migrations.php`. Jika hak ALTER tidak tersedia, jalankan `database_migration_pembayaran.sql` di phpMyAdmin.
+
+5. **Fitur Import Excel (.xlsx) & Export PDF:**
    - **Template Excel Resmi:** Menyediakan tombol unduh template `.xlsx` yang terdiri dari **Sheet 1: DATA** dan **Sheet 2: PETUNJUK** untuk User, Peserta, dan Pembelian.
    - **Alur Import Aman:** Upload &rarr; Validasi Sistem per baris &rarr; Halaman Preview (tampilan baris hijau valid vs baris merah error) &rarr; Tombol "Konfirmasi Import" (hanya memproses baris valid, mengabaikan error).
    - **Opsi Kategori Otomatis:** Otomatis membuat kategori baru di database jika nama kategori pada Excel belum terdaftar.
@@ -39,6 +47,7 @@ Sistem ini didesain khusus **100% kompatibel dengan Shared Hosting Gratis Infini
 
 ```text
 ├── database.sql                  <- Skrip pembuatan database, relasi tabel & seed data
+├── database_migration_pembayaran.sql <- Migrasi manual fitur pembayaran iuran (opsional)
 ├── README.md                     <- Panduan instalasi dan dokumentasi sistem
 ├── index.php                     <- Root router otomatis mengarah ke public_html
 └── public_html/                  <- Root web (diupload ke folder htdocs InfinityFree)
@@ -49,6 +58,7 @@ Sistem ini didesain khusus **100% kompatibel dengan Shared Hosting Gratis Infini
     │   ├── database.php          <- Kredensial koneksi PDO MySQL InfinityFree
     │   ├── auth.php              <- Proteksi role, session guard & redirection
     │   ├── csrf.php              <- Proteksi Cross-Site Request Forgery (CSRF)
+    │   ├── migrations.php        <- Migrasi skema otomatis (fitur pembayaran iuran)
     │   └── helpers.php           <- Format Rupiah, tanggal ID, upload & sanitasi
     ├── admin/
     │   ├── index.php             <- Dashboard Outing Aktif & KPI Keuangan
@@ -63,7 +73,8 @@ Sistem ini didesain khusus **100% kompatibel dengan Shared Hosting Gratis Infini
     ├── member/
     │   ├── index.php             <- Dashboard Member (Outing Saya)
     │   ├── outing_detail.php     <- View-Only: Info, Timeline HP, Peserta, Transparansi
-    │   └── view_receipt.php      <- Viewer bukti pembayaran aman (Anti-Traversal)
+    │   ├── view_receipt.php      <- Viewer bukti pembayaran aman (Anti-Traversal)
+    │   └── view_payment_proof.php <- Viewer bukti transfer member (hanya pemilik & admin)
     ├── api/
     │   ├── outings.php           <- Endpoint AJAX info outing
     │   ├── participants.php      <- Endpoint AJAX status peserta

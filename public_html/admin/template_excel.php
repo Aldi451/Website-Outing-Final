@@ -54,7 +54,7 @@ if ($type === 'users') {
         ['KOLOM', 'TIPE / PILIHAN VALID', 'KETERANGAN & ATURAN'],
         ['USER_ID', 'Teks (Wajib)', 'User ID yang sudah terdaftar di sistem. Jika belum ada di master user, baris akan ditandai error.'],
         ['STATUS_KEHADIRAN', 'ikut / batal / tidak_ikut', 'Pilihan status kehadiran peserta outing.'],
-        ['STATUS_PEMBAYARAN', 'sudah / belum', 'Status pembayaran iuran / kontribusi peserta.'],
+        ['STATUS_PEMBAYARAN', 'sudah / partial / belum', 'Status pembayaran iuran / kontribusi peserta. Gunakan partial jika baru membayar sebagian. Nominal dibayar diisi admin di menu Peserta.'],
         ['CATATAN', 'Teks (Opsional)', 'Catatan tambahan seperti bus, kamar, atau alergi.']
     ];
 

@@ -158,7 +158,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                             }
 
                             if (!in_array($att, ['ikut', 'batal', 'tidak_ikut'])) $att = 'ikut';
-                            if (!in_array($pay, ['sudah', 'belum'])) $pay = 'belum';
+                            if (!in_array($pay, payment_statuses(), true)) $pay = 'belum';
 
                             if ($isValid) $validCount++; else $errorCount++;
 
